@@ -117,6 +117,34 @@ type TLSExtensionJSON interface {
 	UnmarshalJSON([]byte) error
 }
 
+type CustomExtension struct {
+	ID   uint16
+	Body []byte
+}
+
+func (e *CustomExtension) writeToUConn(uc *UConn) error {
+	return nil
+}
+
+func (e *CustomExtension) Len() int {
+	return 4 + len(e.Body)
+}
+
+func (e *CustomExtension) Read(b []byte) (int, error) {
+	if len(b) < e.Len() {
+		return 0, io.ErrShortBuffer
+	}
+
+	b[0] = byte(e.ID >> 8)
+	b[1] = byte(e.ID)
+	b[2] = byte(len(e.Body) >> 8)
+	b[3] = byte(len(e.Body))
+	if len(e.Body) > 0 {
+		copy(b[4:], e.Body)
+	}
+	return e.Len(), io.EOF
+}
+
 // SNIExtension implements server_name (0)
 type SNIExtension struct {
 	ServerName string // not an array because go crypto/tls doesn't support multiple SNIs
